@@ -5,7 +5,7 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 // Datenbank
-$host = 'localhost'; $db = 'familybase'; $user = 'admin'; $pass = 'Mineralwasser))5!';
+$host = 'localhost'; $db = 'familybase'; $user = 'admin'; $pass = 'Password';
 try { 
     $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8", $user, $pass); 
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); 
