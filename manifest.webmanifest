@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <title>DocScan Mail</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.svg">
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <style>
+    :root { --bg:#0f172a; --card:#111827; --text:#f9fafb; --muted:#9ca3af; --accent:#22c55e; --danger:#ef4444; --line:#374151; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:linear-gradient(180deg,#020617,#111827); color:var(--text); min-height:100vh; }
+    header { padding:20px 16px 10px; }
+    h1 { margin:0; font-size:24px; }
+    p { color:var(--muted); line-height:1.4; }
+    main { max-width:820px; margin:0 auto; padding:0 14px 32px; }
+    .card { background:rgba(17,24,39,.92); border:1px solid var(--line); border-radius:18px; padding:14px; margin:12px 0; box-shadow:0 10px 30px rgba(0,0,0,.25); }
+    video, canvas { width:100%; border-radius:14px; background:#000; border:1px solid var(--line); }
+    .row { display:flex; gap:10px; flex-wrap:wrap; }
+    button, label.filebtn, input, textarea {
+      border:0; border-radius:12px; padding:12px 14px; font-size:16px;
+    }
+    button, label.filebtn { background:#1f2937; color:var(--text); cursor:pointer; border:1px solid #4b5563; }
+    button.primary { background:var(--accent); color:#052e16; font-weight:700; border-color:transparent; }
+    button.danger { background:var(--danger); color:white; border-color:transparent; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    input, textarea { width:100%; background:#020617; color:var(--text); border:1px solid var(--line); margin-top:8px; }
+    textarea { min-height:90px; resize:vertical; }
+    #pages { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; }
+    .thumb { position:relative; background:#020617; border:1px solid var(--line); border-radius:12px; padding:8px; }
+    .thumb img { width:100%; border-radius:8px; display:block; }
+    .thumb small { color:var(--muted); display:block; margin-top:6px; }
+    .thumb button { position:absolute; top:6px; right:6px; padding:6px 9px; font-size:13px; }
+    .hint { font-size:14px; color:var(--muted); }
+    .status { padding:10px 12px; border-radius:12px; background:#020617; border:1px solid var(--line); color:var(--muted); }
+    a { color:#86efac; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>📄 DocScan Mail</h1>
+      <p>Dokumente scannen, als PDF bündeln und direkt über deine Mail-App teilen.</p>
+    </header>
+
+    <section class="card">
+      <div class="row">
+        <button id="startCamera" class="primary">Kamera starten</button>
+        <button id="capture" disabled>Seite scannen</button>
+        <label class="filebtn">
+          Bild/PDF-Seite wählen
+          <input id="fileInput" type="file" accept="image/*" multiple hidden>
+        </label>
+      </div>
+      <p class="hint">Tipp: Halte das Dokument möglichst gerade und hell beleuchtet. Die App speichert nichts auf einem Server.</p>
+      <video id="video" playsinline autoplay muted></video>
+      <canvas id="canvas" hidden></canvas>
+    </section>
+
+    <section class="card">
+      <h2>Mail vorbereiten</h2>
+      <input id="mailTo" type="email" placeholder="Empfänger, z. B. name@firma.de">
+      <input id="subject" type="text" value="Dokumente als PDF" placeholder="Betreff">
+      <textarea id="body">Hallo,
+
+anbei die eingescannten Dokumente.
+
+Viele Grüße</textarea>
+      <div class="row" style="margin-top:10px">
+        <button id="sharePdf" class="primary" disabled>PDF per Mail/Teilen senden</button>
+        <button id="downloadPdf" disabled>PDF herunterladen</button>
+        <button id="clear" class="danger" disabled>Scans löschen</button>
+      </div>
+      <p class="hint">Auf dem Smartphone öffnet „PDF per Mail/Teilen senden“ die Teilen-Auswahl. Dort wählst du Gmail, Outlook, Apple Mail usw. aus.</p>
+      <div id="status" class="status">Noch keine Seite gescannt.</div>
+    </section>
+
+    <section class="card">
+      <h2>Gescannte Seiten</h2>
+      <div id="pages"></div>
+    </section>
+  </main>
+
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const startCameraBtn = document.getElementById('startCamera');
+const captureBtn = document.getElementById('capture');
+const shareBtn = document.getElementById('sharePdf');
+const downloadBtn = document.getElementById('downloadPdf');
+const clearBtn = document.getElementById('clear');
+const pagesEl = document.getElementById('pages');
+const statusEl = document.getElementById('status');
+const fileInput = document.getElementById('fileInput');
+
+let stream = null;
+let scans = [];
+
+function setStatus(text) {
+  statusEl.textContent = text;
+}
+
+function updateButtons() {
+  const hasPages = scans.length > 0;
+  shareBtn.disabled = !hasPages;
+  downloadBtn.disabled = !hasPages;
+  clearBtn.disabled = !hasPages;
+  captureBtn.disabled = !stream;
+}
+
+async function startCamera() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false
+    });
+    video.srcObject = stream;
+    setStatus("Kamera aktiv. Du kannst jetzt Seiten scannen.");
+    updateButtons();
+  } catch (err) {
+    console.error(err);
+    setStatus("Kamera konnte nicht gestartet werden. Prüfe Browser-Berechtigungen und HTTPS.");
+  }
+}
+
+function capturePage() {
+  if (!stream) return;
+  const w = video.videoWidth || 1280;
+  const h = video.videoHeight || 720;
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, w, h);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  scans.push({ dataUrl, createdAt: new Date().toISOString() });
+  renderPages();
+  setStatus(`${scans.length} Seite(n) im PDF vorbereitet.`);
+  updateButtons();
+}
+
+function renderPages() {
+  pagesEl.innerHTML = "";
+  scans.forEach((scan, index) => {
+    const div = document.createElement('div');
+    div.className = 'thumb';
+    div.innerHTML = `
+      <button title="Seite entfernen">×</button>
+      <img src="${scan.dataUrl}" alt="Scan ${index + 1}">
+      <small>Seite ${index + 1}</small>
+    `;
+    div.querySelector('button').onclick = () => {
+      scans.splice(index, 1);
+      renderPages();
+      setStatus(scans.length ? `${scans.length} Seite(n) im PDF vorbereitet.` : "Noch keine Seite gescannt.");
+      updateButtons();
+    };
+    pagesEl.appendChild(div);
+  });
+}
+
+function imageSize(dataUrl) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.width, height: img.height, img });
+    img.src = dataUrl;
+  });
+}
+
+async function createPdfBlob() {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+  const pageW = 210;
+  const pageH = 297;
+  const margin = 8;
+
+  for (let i = 0; i < scans.length; i++) {
+    if (i > 0) pdf.addPage();
+    const { width, height } = await imageSize(scans[i].dataUrl);
+    const maxW = pageW - margin * 2;
+    const maxH = pageH - margin * 2;
+    const ratio = Math.min(maxW / width, maxH / height);
+    const imgW = width * ratio;
+    const imgH = height * ratio;
+    const x = (pageW - imgW) / 2;
+    const y = (pageH - imgH) / 2;
+    pdf.addImage(scans[i].dataUrl, 'JPEG', x, y, imgW, imgH);
+  }
+
+  return pdf.output('blob');
+}
+
+function fileName() {
+  const date = new Date().toISOString().slice(0,10);
+  return `Scan_${date}.pdf`;
+}
+
+async function sharePdf() {
+  try {
+    const blob = await createPdfBlob();
+    const file = new File([blob], fileName(), { type: 'application/pdf' });
+    const to = document.getElementById('mailTo').value.trim();
+    const subject = document.getElementById('subject').value.trim();
+    const body = document.getElementById('body').value.trim();
+    const text = `${body}${to ? "\n\nEmpfänger: " + to : ""}`;
+
+    if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+      await navigator.share({ title: subject || "Dokumente", text, files: [file] });
+      setStatus("PDF wurde an die ausgewählte App übergeben.");
+    } else {
+      downloadBlob(blob);
+      const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\nHinweis: Die PDF wurde heruntergeladen und muss ggf. manuell angehängt werden.")}`;
+      window.location.href = mailto;
+      setStatus("Dieser Browser kann Dateien nicht direkt teilen. PDF wurde heruntergeladen; bitte manuell anhängen.");
+    }
+  } catch (err) {
+    console.error(err);
+    setStatus("PDF konnte nicht geteilt werden. Versuche stattdessen den Download.");
+  }
+}
+
+function downloadBlob(blob) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName();
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function downloadPdf() {
+  const blob = await createPdfBlob();
+  downloadBlob(blob);
+  setStatus("PDF wurde heruntergeladen.");
+}
+
+function clearScans() {
+  scans = [];
+  renderPages();
+  setStatus("Scans gelöscht.");
+  updateButtons();
+}
+
+function loadFiles(files) {
+  [...files].forEach(file => {
+    if (!file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      scans.push({ dataUrl: reader.result, createdAt: new Date().toISOString() });
+      renderPages();
+      setStatus(`${scans.length} Seite(n) im PDF vorbereitet.`);
+      updateButtons();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+startCameraBtn.addEventListener('click', startCamera);
+captureBtn.addEventListener('click', capturePage);
+shareBtn.addEventListener('click', sharePdf);
+downloadBtn.addEventListener('click', downloadPdf);
+clearBtn.addEventListener('click', clearScans);
+fileInput.addEventListener('change', e => loadFiles(e.target.files));
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('service-worker.js'));
+}
+
+updateButtons();
+</script>
+</body>
+</html>
