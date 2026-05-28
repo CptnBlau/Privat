@@ -1,7 +1,13 @@
-# DocScan Mail PWA v2
+# DocScan Mail PWA v3
 
-## Dateien
-Diese Dateien müssen direkt im Root des GitHub-Repositories liegen:
+## Neu in v3
+- Kamera öffnet im Vollbild-Popup
+- Nutzer kann 4 Ecken des Dokuments ziehen
+- Seiten können übernommen, sortiert, gelöscht und als PDF geteilt werden
+- Bildverbesserung: Dokumentmodus, Schwarzweiß, Farbe, Original
+
+## GitHub Pages
+Diese Dateien müssen direkt im Root des Repositories liegen:
 
 - index.html
 - manifest.webmanifest
@@ -9,12 +15,8 @@ Diese Dateien müssen direkt im Root des GitHub-Repositories liegen:
 - icons/icon-192.svg
 - icons/icon-512.svg
 
-## GitHub Pages
-Settings > Pages > Deploy from branch > main > /root
-
-Danach:
+Danach öffnen:
 https://cptnblau.github.io/Privat/index.html
 
-## Hinweis zu Mail
-Eine PWA kann aus Sicherheitsgründen nicht zuverlässig eine Mailadresse vorausfüllen UND gleichzeitig eine Datei als Anhang an Gmail/Outlook übergeben.
-Deshalb nutzt die App die native Teilen-Funktion. Die PDF wird als Datei an die Mail-App übergeben.
+## Hinweis
+Die Perspektivkorrektur ist bewusst leichtgewichtig umgesetzt. Für perfekte Dokumentenerkennung und echte Homographie wäre OpenCV.js der nächste Ausbau.
