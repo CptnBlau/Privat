@@ -3,273 +3,1003 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#111827">
+  <meta name="theme-color" content="#0c0f1a">
   <title>DocScan Mail</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.svg">
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <style>
-    :root { --bg:#0f172a; --card:#111827; --text:#f9fafb; --muted:#9ca3af; --accent:#22c55e; --danger:#ef4444; --line:#374151; }
-    * { box-sizing:border-box; }
-    body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:linear-gradient(180deg,#020617,#111827); color:var(--text); min-height:100vh; }
-    header { padding:20px 16px 10px; }
-    h1 { margin:0; font-size:24px; }
-    p { color:var(--muted); line-height:1.4; }
-    main { max-width:820px; margin:0 auto; padding:0 14px 32px; }
-    .card { background:rgba(17,24,39,.92); border:1px solid var(--line); border-radius:18px; padding:14px; margin:12px 0; box-shadow:0 10px 30px rgba(0,0,0,.25); }
-    video, canvas { width:100%; border-radius:14px; background:#000; border:1px solid var(--line); }
-    .row { display:flex; gap:10px; flex-wrap:wrap; }
-    button, label.filebtn, input, textarea {
-      border:0; border-radius:12px; padding:12px 14px; font-size:16px;
+    :root {
+      --bg:       #0c0f1a;
+      --surface:  #111827;
+      --raised:   #1a2235;
+      --text:     #f1f5f9;
+      --muted:    #6b7280;
+      --dim:      #374151;
+      --accent:   #22c55e;
+      --accent2:  #16a34a;
+      --danger:   #ef4444;
+      --warn:     #f59e0b;
+      --border:   rgba(255,255,255,0.07);
     }
-    button, label.filebtn { background:#1f2937; color:var(--text); cursor:pointer; border:1px solid #4b5563; }
-    button.primary { background:var(--accent); color:#052e16; font-weight:700; border-color:transparent; }
-    button.danger { background:var(--danger); color:white; border-color:transparent; }
-    button:disabled { opacity:.45; cursor:not-allowed; }
-    input, textarea { width:100%; background:#020617; color:var(--text); border:1px solid var(--line); margin-top:8px; }
-    textarea { min-height:90px; resize:vertical; }
-    #pages { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; }
-    .thumb { position:relative; background:#020617; border:1px solid var(--line); border-radius:12px; padding:8px; }
-    .thumb img { width:100%; border-radius:8px; display:block; }
-    .thumb small { color:var(--muted); display:block; margin-top:6px; }
-    .thumb button { position:absolute; top:6px; right:6px; padding:6px 9px; font-size:13px; }
-    .hint { font-size:14px; color:var(--muted); }
-    .status { padding:10px 12px; border-radius:12px; background:#020617; border:1px solid var(--line); color:var(--muted); }
-    a { color:#86efac; }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Layout ── */
+    main {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 20px 14px 48px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .header-icon {
+      width: 44px; height: 44px;
+      background: var(--accent);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+      box-shadow: 0 0 20px rgba(34,197,94,0.35);
+    }
+
+    header h1 { font-size: 20px; font-weight: 700; }
+    header p  { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    /* ── Buttons ── */
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    button, label.filebtn {
+      display: inline-flex; align-items: center; gap: 5px;
+      border-radius: 12px;
+      padding: 11px 15px;
+      font-size: 14px;
+      font-family: inherit;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--dim);
+      background: var(--raised);
+      color: var(--text);
+      transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    button:active, label.filebtn:active { transform: scale(0.96); }
+
+    button.primary {
+      background: var(--accent);
+      color: #052e16;
+      font-weight: 700;
+      border-color: transparent;
+      box-shadow: 0 4px 14px rgba(34,197,94,0.3);
+    }
+
+    button.primary:hover { background: var(--accent2); }
+
+    button.danger {
+      background: rgba(239,68,68,0.15);
+      color: var(--danger);
+      border-color: rgba(239,68,68,0.25);
+    }
+
+    button.toggle { background: var(--raised); border-color: var(--dim); }
+
+    button.toggle.on {
+      background: rgba(34,197,94,0.12);
+      border-color: rgba(34,197,94,0.4);
+      color: var(--accent);
+    }
+
+    button:disabled {
+      opacity: 0.38;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    /* ── Camera ── */
+    .camera-area {
+      position: relative;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #000;
+      border: 1px solid var(--border);
+      margin: 12px 0;
+    }
+
+    #video {
+      width: 100%;
+      display: block;
+      max-height: 56vw;  /* landscape feel */
+      object-fit: cover;
+    }
+
+    /* overlay sits exactly on top */
+    #guideCanvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+    }
+
+    #flashEl {
+      position: absolute;
+      inset: 0;
+      background: #fff;
+      opacity: 0;
+      pointer-events: none;
+      border-radius: 14px;
+    }
+
+    #countdownEl {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0.7);
+      font-size: 88px;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 0 40px rgba(0,0,0,0.8);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s, transform 0.15s;
+    }
+
+    #countdownEl.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .cam-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .cam-placeholder svg { opacity: 0.3; }
+
+    /* ── Toggle pills ── */
+    .pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .pills button {
+      padding: 7px 13px;
+      font-size: 13px;
+      border-radius: 20px;
+    }
+
+    /* ── Status bar ── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 13px;
+      background: #0a0e1a;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .dot.green  { background: var(--accent); box-shadow: 0 0 6px rgba(34,197,94,0.6); }
+    .dot.yellow { background: var(--warn); }
+    .dot.red    { background: var(--danger); }
+
+    /* ── Form ── */
+    .field { margin-top: 10px; }
+    .field label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 5px; }
+
+    input, textarea {
+      width: 100%;
+      background: #0a0e1a;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: rgba(34,197,94,0.5);
+    }
+
+    textarea { min-height: 80px; resize: vertical; }
+
+    /* ── Pages grid ── */
+    #pagesGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 10px;
+    }
+
+    .thumb {
+      position: relative;
+      background: #0a0e1a;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 7px;
+      transition: border-color 0.2s;
+    }
+
+    .thumb:hover { border-color: var(--dim); }
+
+    .thumb img {
+      width: 100%;
+      border-radius: 8px;
+      display: block;
+    }
+
+    .thumb-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 6px;
+    }
+
+    .thumb-label small { color: var(--muted); font-size: 11px; }
+
+    .thumb-btns { display: flex; gap: 3px; }
+
+    .thumb-btns button {
+      padding: 3px 6px;
+      font-size: 12px;
+      border-radius: 7px;
+      border-color: var(--border);
+    }
+
+    .del-btn {
+      position: absolute;
+      top: 5px; right: 5px;
+      width: 22px; height: 22px;
+      padding: 0 !important;
+      border-radius: 50% !important;
+      background: rgba(239,68,68,0.8) !important;
+      color: #fff !important;
+      border-color: transparent !important;
+      font-size: 14px !important;
+      line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .empty-hint {
+      text-align: center;
+      padding: 24px 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-top: 8px;
+    }
+
+    /* ── Page count badge ── */
+    .badge {
+      display: inline-block;
+      background: rgba(34,197,94,0.15);
+      color: var(--accent);
+      border-radius: 20px;
+      padding: 1px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 6px;
+    }
   </style>
 </head>
 <body>
-  <main>
-    <header>
-      <h1>📄 DocScan Mail</h1>
-      <p>Dokumente scannen, als PDF bündeln und direkt über deine Mail-App teilen.</p>
-    </header>
+<main>
 
-    <section class="card">
-      <div class="row">
-        <button id="startCamera" class="primary">Kamera starten</button>
-        <button id="capture" disabled>Seite scannen</button>
-        <label class="filebtn">
-          Bild/PDF-Seite wählen
-          <input id="fileInput" type="file" accept="image/*" multiple hidden>
-        </label>
+  <header>
+    <div class="header-icon">📄</div>
+    <div>
+      <h1>DocScan Mail</h1>
+      <p>Scannen · PDF bündeln · Teilen</p>
+    </div>
+  </header>
+
+  <!-- ── Kamera ─────────────────────────────────── -->
+  <section class="card">
+    <div class="card-title">Kamera</div>
+
+    <div class="row">
+      <button id="btnStart" class="primary">📷 Kamera starten</button>
+      <button id="btnCapture" disabled>✂️ Jetzt scannen</button>
+      <label class="filebtn">
+        🖼 Bild wählen
+        <input id="fileInput" type="file" accept="image/*" multiple hidden>
+      </label>
+    </div>
+
+    <!-- Einstellungs-Pillen -->
+    <div class="pills">
+      <button class="toggle on" id="togAuto"     title="Automatisch scannen wenn das Bild ruhig ist">⏱ Auto-Scan</button>
+      <button class="toggle"    id="togGray"     title="Bild in Graustufen umwandeln">◑ Graustufen</button>
+      <button class="toggle on" id="togContrast" title="Kontrast für Dokumente erhöhen">✦ Kontrast</button>
+    </div>
+
+    <!-- Kamera-Vorschau -->
+    <div class="camera-area" id="cameraArea">
+      <div class="cam-placeholder" id="placeholder">
+        <svg width="52" height="52" fill="none" stroke="currentColor" stroke-width="1.4" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+        <span>Kamera starten</span>
       </div>
-      <p class="hint">Tipp: Halte das Dokument möglichst gerade und hell beleuchtet. Die App speichert nichts auf einem Server.</p>
       <video id="video" playsinline autoplay muted></video>
-      <canvas id="canvas" hidden></canvas>
-    </section>
+      <canvas id="guideCanvas"></canvas>
+      <div id="flashEl"></div>
+      <div id="countdownEl"></div>
+    </div>
 
-    <section class="card">
-      <h2>Mail vorbereiten</h2>
-      <input id="mailTo" type="email" placeholder="Empfänger, z. B. name@firma.de">
-      <input id="subject" type="text" value="Dokumente als PDF" placeholder="Betreff">
+    <div class="status-bar">
+      <div class="dot" id="statusDot"></div>
+      <span id="statusMsg">Kamera starten, um Dokumente zu scannen.</span>
+    </div>
+
+    <p class="hint">💡 Auto-Scan erkennt, wenn das Bild 1,5 Sek. ruhig ist, und löst dann automatisch aus. Graustufen + Kontrast verbessern die Lesbarkeit.</p>
+  </section>
+
+  <!-- ── Mail ───────────────────────────────────── -->
+  <section class="card">
+    <div class="card-title">Mail vorbereiten</div>
+
+    <div class="field">
+      <label>Empfänger</label>
+      <input id="mailTo" type="email" placeholder="name@firma.de">
+    </div>
+    <div class="field">
+      <label>Betreff</label>
+      <input id="subject" type="text" value="Dokumente als PDF">
+    </div>
+    <div class="field">
+      <label>Nachricht</label>
       <textarea id="body">Hallo,
 
 anbei die eingescannten Dokumente.
 
 Viele Grüße</textarea>
-      <div class="row" style="margin-top:10px">
-        <button id="sharePdf" class="primary" disabled>PDF per Mail/Teilen senden</button>
-        <button id="downloadPdf" disabled>PDF herunterladen</button>
-        <button id="clear" class="danger" disabled>Scans löschen</button>
-      </div>
-      <p class="hint">Auf dem Smartphone öffnet „PDF per Mail/Teilen senden“ die Teilen-Auswahl. Dort wählst du Gmail, Outlook, Apple Mail usw. aus.</p>
-      <div id="status" class="status">Noch keine Seite gescannt.</div>
-    </section>
+    </div>
 
-    <section class="card">
-      <h2>Gescannte Seiten</h2>
-      <div id="pages"></div>
-    </section>
-  </main>
+    <div class="row" style="margin-top:12px">
+      <button id="btnShare"    class="primary" disabled>📤 Senden / Teilen</button>
+      <button id="btnDownload" disabled>⬇️ Herunterladen</button>
+      <button id="btnClear"    class="danger" disabled>🗑 Löschen</button>
+    </div>
+
+    <p class="hint">Auf dem iPhone öffnet „Senden / Teilen" die native Teilen-Auswahl — wähle Mail, Gmail, WhatsApp usw. Das PDF verlässt nie einen Server.</p>
+  </section>
+
+  <!-- ── Seiten ─────────────────────────────────── -->
+  <section class="card">
+    <div class="card-title">
+      Gescannte Seiten
+      <span class="badge" id="pageCountBadge" style="display:none">0</span>
+    </div>
+    <div id="pagesGrid"></div>
+    <div class="empty-hint" id="emptyHint">Noch keine Seiten gescannt.</div>
+  </section>
+
+</main>
+
+<!-- Offscreen-Canvas für Sampling + Enhancing -->
+<canvas id="workCanvas" style="display:none"></canvas>
 
 <script>
-const video = document.getElementById('video');
-const canvas = document.getElementById('canvas');
-const startCameraBtn = document.getElementById('startCamera');
-const captureBtn = document.getElementById('capture');
-const shareBtn = document.getElementById('sharePdf');
-const downloadBtn = document.getElementById('downloadPdf');
-const clearBtn = document.getElementById('clear');
-const pagesEl = document.getElementById('pages');
-const statusEl = document.getElementById('status');
-const fileInput = document.getElementById('fileInput');
+'use strict';
 
-let stream = null;
-let scans = [];
+// ───────────────────────────────────────────────
+// DOM refs
+// ───────────────────────────────────────────────
+const video        = document.getElementById('video');
+const guideCanvas  = document.getElementById('guideCanvas');
+const flashEl      = document.getElementById('flashEl');
+const countdownEl  = document.getElementById('countdownEl');
+const placeholder  = document.getElementById('placeholder');
+const workCanvas   = document.getElementById('workCanvas');
+const pagesGrid    = document.getElementById('pagesGrid');
+const emptyHint    = document.getElementById('emptyHint');
+const statusMsg    = document.getElementById('statusMsg');
+const statusDot    = document.getElementById('statusDot');
+const pageCountBadge = document.getElementById('pageCountBadge');
 
-function setStatus(text) {
-  statusEl.textContent = text;
+const btnStart    = document.getElementById('btnStart');
+const btnCapture  = document.getElementById('btnCapture');
+const btnShare    = document.getElementById('btnShare');
+const btnDownload = document.getElementById('btnDownload');
+const btnClear    = document.getElementById('btnClear');
+const fileInput   = document.getElementById('fileInput');
+
+const togAuto     = document.getElementById('togAuto');
+const togGray     = document.getElementById('togGray');
+const togContrast = document.getElementById('togContrast');
+
+// ───────────────────────────────────────────────
+// State
+// ───────────────────────────────────────────────
+let mediaStream   = null;
+let cameraActive  = false;
+let scans         = [];
+
+let autoScan      = true;
+let useGray       = false;
+let useContrast   = true;
+
+// Stability detection
+let lastSampleData = null;
+let stableMs       = 0;
+let isAutoCapturing = false;
+let cdInterval     = null;
+let sampleInterval = null;
+let overlayRAF     = null;
+let cooldownUntil  = 0;
+
+const STABLE_NEEDED  = 1800;  // ms still before auto-capture triggers
+const SAMPLE_TICK    = 280;   // ms between stability checks
+const DIFF_THRESHOLD = 11;    // mean per-channel pixel diff = "moving"
+const POST_COOLDOWN  = 2800;  // ms after capture before auto can fire again
+
+// ───────────────────────────────────────────────
+// Status helper
+// ───────────────────────────────────────────────
+function setStatus(msg, dot = '') {
+  statusMsg.textContent = msg;
+  statusDot.className = 'dot' + (dot ? ' ' + dot : '');
 }
 
-function updateButtons() {
-  const hasPages = scans.length > 0;
-  shareBtn.disabled = !hasPages;
-  downloadBtn.disabled = !hasPages;
-  clearBtn.disabled = !hasPages;
-  captureBtn.disabled = !stream;
+// ───────────────────────────────────────────────
+// Update button states
+// ───────────────────────────────────────────────
+function syncUI() {
+  const has = scans.length > 0;
+  btnCapture.disabled  = !cameraActive;
+  btnShare.disabled    = !has;
+  btnDownload.disabled = !has;
+  btnClear.disabled    = !has;
+  pageCountBadge.style.display = has ? 'inline-block' : 'none';
+  pageCountBadge.textContent = scans.length;
+  emptyHint.style.display = has ? 'none' : 'block';
 }
+
+// ───────────────────────────────────────────────
+// Toggle pills
+// ───────────────────────────────────────────────
+function initToggle(btn, getter, setter) {
+  btn.addEventListener('click', () => {
+    setter(!getter());
+    btn.classList.toggle('on', getter());
+    if (btn === togAuto && !getter() && isAutoCapturing) cancelCountdown();
+  });
+}
+initToggle(togAuto,     () => autoScan,    v => { autoScan = v; });
+initToggle(togGray,     () => useGray,     v => { useGray = v; });
+initToggle(togContrast, () => useContrast, v => { useContrast = v; });
+
+// ───────────────────────────────────────────────
+// Camera start
+// ───────────────────────────────────────────────
+btnStart.addEventListener('click', startCamera);
 
 async function startCamera() {
+  placeholder.style.display = 'none';
+  setStatus('Kamera wird gestartet…', 'yellow');
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+    if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: 'environment' },
+        width:  { ideal: 1920 },
+        height: { ideal: 1080 }
+      },
       audio: false
     });
-    video.srcObject = stream;
-    setStatus("Kamera aktiv. Du kannst jetzt Seiten scannen.");
-    updateButtons();
+    video.srcObject = mediaStream;
+    await video.play();
+    cameraActive = true;
+    btnStart.textContent = '🔄 Neu starten';
+    setStatus('Kamera aktiv – Dokument in den Rahmen halten.', 'green');
+    syncUI();
+    startSampling();
+    startOverlayLoop();
   } catch (err) {
-    console.error(err);
-    setStatus("Kamera konnte nicht gestartet werden. Prüfe Browser-Berechtigungen und HTTPS.");
+    placeholder.style.display = 'flex';
+    cameraActive = false;
+    setStatus('Kamera-Fehler: ' + (err.message || 'Berechtigung verweigert.'), 'red');
+    syncUI();
   }
 }
 
-function capturePage() {
-  if (!stream) return;
-  const w = video.videoWidth || 1280;
-  const h = video.videoHeight || 720;
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0, w, h);
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-  scans.push({ dataUrl, createdAt: new Date().toISOString() });
-  renderPages();
-  setStatus(`${scans.length} Seite(n) im PDF vorbereitet.`);
-  updateButtons();
+// ───────────────────────────────────────────────
+// Stability detection
+// ───────────────────────────────────────────────
+function startSampling() {
+  if (sampleInterval) clearInterval(sampleInterval);
+  sampleInterval = setInterval(sampleFrame, SAMPLE_TICK);
 }
 
-function renderPages() {
-  pagesEl.innerHTML = "";
-  scans.forEach((scan, index) => {
-    const div = document.createElement('div');
-    div.className = 'thumb';
-    div.innerHTML = `
-      <button title="Seite entfernen">×</button>
-      <img src="${scan.dataUrl}" alt="Scan ${index + 1}">
-      <small>Seite ${index + 1}</small>
-    `;
-    div.querySelector('button').onclick = () => {
-      scans.splice(index, 1);
-      renderPages();
-      setStatus(scans.length ? `${scans.length} Seite(n) im PDF vorbereitet.` : "Noch keine Seite gescannt.");
-      updateButtons();
-    };
-    pagesEl.appendChild(div);
+function sampleFrame() {
+  if (!cameraActive || isAutoCapturing) return;
+  if (Date.now() < cooldownUntil) { stableMs = 0; return; }
+
+  const W = 80, H = 45;
+  const ctx = workCanvas.getContext('2d');
+  workCanvas.width = W; workCanvas.height = H;
+  try { ctx.drawImage(video, 0, 0, W, H); } catch { return; }
+  const cur = ctx.getImageData(0, 0, W, H).data;
+
+  if (lastSampleData && lastSampleData.length === cur.length) {
+    let sum = 0;
+    for (let i = 0; i < cur.length; i += 4) {
+      sum += Math.abs(cur[i]   - lastSampleData[i])
+           + Math.abs(cur[i+1] - lastSampleData[i+1])
+           + Math.abs(cur[i+2] - lastSampleData[i+2]);
+    }
+    const diff = sum / (W * H * 3);
+
+    if (diff < DIFF_THRESHOLD) {
+      stableMs += SAMPLE_TICK;
+      if (autoScan && stableMs >= STABLE_NEEDED) {
+        startCountdown();
+      }
+    } else {
+      if (stableMs > 0) stableMs = 0;
+    }
+  }
+
+  lastSampleData = new Uint8ClampedArray(cur);
+}
+
+// ───────────────────────────────────────────────
+// Auto-capture countdown
+// ───────────────────────────────────────────────
+function startCountdown() {
+  if (isAutoCapturing) return;
+  isAutoCapturing = true;
+  let n = 3;
+  showCountdownNum(n);
+  cdInterval = setInterval(() => {
+    n--;
+    if (n > 0) {
+      showCountdownNum(n);
+    } else {
+      clearInterval(cdInterval);
+      hideCountdown();
+      isAutoCapturing = false;
+      stableMs = 0;
+      capturePage();
+    }
+  }, 550);
+}
+
+function cancelCountdown() {
+  isAutoCapturing = false;
+  clearInterval(cdInterval);
+  hideCountdown();
+  stableMs = 0;
+}
+
+function showCountdownNum(n) {
+  countdownEl.textContent = n;
+  countdownEl.classList.add('show');
+}
+function hideCountdown() {
+  countdownEl.classList.remove('show');
+}
+
+// ───────────────────────────────────────────────
+// Guide overlay drawing
+// ───────────────────────────────────────────────
+function startOverlayLoop() {
+  if (overlayRAF) cancelAnimationFrame(overlayRAF);
+  drawGuide();
+}
+
+function drawGuide() {
+  if (!cameraActive) return;
+  overlayRAF = requestAnimationFrame(drawGuide);
+
+  const cw = video.clientWidth  || 320;
+  const ch = video.clientHeight || 180;
+  if (guideCanvas.width !== cw || guideCanvas.height !== ch) {
+    guideCanvas.width  = cw;
+    guideCanvas.height = ch;
+  }
+
+  const ctx = guideCanvas.getContext('2d');
+  ctx.clearRect(0, 0, cw, ch);
+
+  // Guide rectangle (with margin)
+  const mx = Math.round(cw * 0.06);
+  const my = Math.round(ch * 0.09);
+  const gx = mx, gy = my;
+  const gw = cw - mx * 2;
+  const gh = ch - my * 2;
+
+  // Dark vignette: 4 rects outside guide
+  ctx.fillStyle = 'rgba(0,0,0,0.42)';
+  ctx.fillRect(0,  0,  cw, gy);
+  ctx.fillRect(0,  gy + gh, cw, ch - gy - gh);
+  ctx.fillRect(0,  gy, gx, gh);
+  ctx.fillRect(gx + gw, gy, cw - gx - gw, gh);
+
+  // Color lerp: white → yellow → green based on stability
+  const t = Math.min(stableMs / STABLE_NEEDED, 1);
+  let cr, cg, cb;
+  if (t < 0.5) {
+    cr = 255; cg = 255; cb = Math.round(255 * (1 - t * 2));
+  } else {
+    cr = Math.round(255 * (1 - (t - 0.5) * 2)); cg = 200; cb = 30;
+  }
+  const col = `rgb(${cr},${cg},${cb})`;
+
+  // Corner L-markers
+  const cl = Math.round(Math.min(gw, gh) * 0.13);
+  ctx.strokeStyle = col;
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  ctx.shadowColor = col;
+  ctx.shadowBlur = 8;
+
+  function corner(x, y, sx, sy) {
+    ctx.beginPath();
+    ctx.moveTo(x + sx * cl, y);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x, y + sy * cl);
+    ctx.stroke();
+  }
+  corner(gx,      gy,      +1, +1);
+  corner(gx + gw, gy,      -1, +1);
+  corner(gx,      gy + gh, +1, -1);
+  corner(gx + gw, gy + gh, -1, -1);
+
+  ctx.shadowBlur = 0;
+
+  // Progress bar (top edge of guide)
+  if (t > 0 && !isAutoCapturing) {
+    ctx.fillStyle = col;
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(gx, gy - 4, gw * t, 3, 2)
+                  : drawRoundRect(ctx, gx, gy - 4, gw * t, 3, 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // "Erkannt" label
+  if (t >= 0.95 && autoScan && !isAutoCapturing) {
+    ctx.fillStyle = col;
+    ctx.font = `bold 13px -apple-system, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(0,0,0,0.7)';
+    ctx.shadowBlur = 6;
+    ctx.fillText('Dokument erkannt', cw / 2, gy - 10);
+    ctx.shadowBlur = 0;
+  }
+}
+
+// Fallback roundRect path for older Safari
+function drawRoundRect(ctx, x, y, w, h, r) {
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// ───────────────────────────────────────────────
+// Capture
+// ───────────────────────────────────────────────
+btnCapture.addEventListener('click', () => {
+  if (isAutoCapturing) cancelCountdown();
+  stableMs = 0;
+  capturePage();
+});
+
+async function capturePage() {
+  if (!cameraActive) return;
+
+  // Flash effect
+  flashEl.style.transition = 'none';
+  flashEl.style.opacity = '0.75';
+  requestAnimationFrame(() => {
+    flashEl.style.transition = 'opacity 0.18s ease-out';
+    flashEl.style.opacity = '0';
   });
+
+  const W = video.videoWidth  || 1280;
+  const H = video.videoHeight || 720;
+  workCanvas.width = W; workCanvas.height = H;
+  const ctx = workCanvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, W, H);
+
+  let dataUrl = workCanvas.toDataURL('image/jpeg', 0.93);
+  if (useGray || useContrast) {
+    dataUrl = await enhanceImage(dataUrl);
+  }
+
+  scans.push({ dataUrl, ts: Date.now() });
+  cooldownUntil  = Date.now() + POST_COOLDOWN;
+  lastSampleData = null;
+  stableMs = 0;
+
+  renderPages();
+  setStatus(`${scans.length} Seite(n) erfasst.`, 'green');
+  syncUI();
 }
 
-function imageSize(dataUrl) {
-  return new Promise((resolve) => {
+// ───────────────────────────────────────────────
+// Image enhancement
+// ───────────────────────────────────────────────
+function enhanceImage(dataUrl) {
+  return new Promise(resolve => {
     const img = new Image();
-    img.onload = () => resolve({ width: img.width, height: img.height, img });
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = img.width; c.height = img.height;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+
+      const id = ctx.getImageData(0, 0, c.width, c.height);
+      const d  = id.data;
+      const cf = useContrast ? 1.5 : 1;
+      const cb = useContrast ? 12  : 0;   // slight brightness lift
+
+      for (let i = 0; i < d.length; i += 4) {
+        let r = d[i], g = d[i+1], b = d[i+2];
+
+        if (useGray) {
+          r = g = b = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+        }
+
+        if (useContrast) {
+          r = Math.min(255, Math.max(0, cf * (r - 128) + 128 + cb));
+          g = Math.min(255, Math.max(0, cf * (g - 128) + 128 + cb));
+          b = Math.min(255, Math.max(0, cf * (b - 128) + 128 + cb));
+        }
+
+        d[i] = r; d[i+1] = g; d[i+2] = b;
+      }
+
+      ctx.putImageData(id, 0, 0);
+      resolve(c.toDataURL('image/jpeg', 0.92));
+    };
     img.src = dataUrl;
   });
 }
 
-async function createPdfBlob() {
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-  const pageW = 210;
-  const pageH = 297;
-  const margin = 8;
+// ───────────────────────────────────────────────
+// Render page thumbnails
+// ───────────────────────────────────────────────
+function renderPages() {
+  pagesGrid.innerHTML = '';
+  scans.forEach((scan, i) => {
+    const div = document.createElement('div');
+    div.className = 'thumb';
+    div.innerHTML = `
+      <button class="del-btn" title="Entfernen">×</button>
+      <img src="${scan.dataUrl}" alt="Seite ${i + 1}">
+      <div class="thumb-label">
+        <small>Seite ${i + 1}</small>
+        <div class="thumb-btns">
+          ${i > 0 ? `<button class="mv-up" title="Hoch">↑</button>` : ''}
+          ${i < scans.length - 1 ? `<button class="mv-dn" title="Runter">↓</button>` : ''}
+        </div>
+      </div>
+    `;
 
-  for (let i = 0; i < scans.length; i++) {
-    if (i > 0) pdf.addPage();
-    const { width, height } = await imageSize(scans[i].dataUrl);
-    const maxW = pageW - margin * 2;
-    const maxH = pageH - margin * 2;
-    const ratio = Math.min(maxW / width, maxH / height);
-    const imgW = width * ratio;
-    const imgH = height * ratio;
-    const x = (pageW - imgW) / 2;
-    const y = (pageH - imgH) / 2;
-    pdf.addImage(scans[i].dataUrl, 'JPEG', x, y, imgW, imgH);
-  }
-
-  return pdf.output('blob');
-}
-
-function fileName() {
-  const date = new Date().toISOString().slice(0,10);
-  return `Scan_${date}.pdf`;
-}
-
-async function sharePdf() {
-  try {
-    const blob = await createPdfBlob();
-    const file = new File([blob], fileName(), { type: 'application/pdf' });
-    const to = document.getElementById('mailTo').value.trim();
-    const subject = document.getElementById('subject').value.trim();
-    const body = document.getElementById('body').value.trim();
-    const text = `${body}${to ? "\n\nEmpfänger: " + to : ""}`;
-
-    if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
-      await navigator.share({ title: subject || "Dokumente", text, files: [file] });
-      setStatus("PDF wurde an die ausgewählte App übergeben.");
-    } else {
-      downloadBlob(blob);
-      const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\nHinweis: Die PDF wurde heruntergeladen und muss ggf. manuell angehängt werden.")}`;
-      window.location.href = mailto;
-      setStatus("Dieser Browser kann Dateien nicht direkt teilen. PDF wurde heruntergeladen; bitte manuell anhängen.");
-    }
-  } catch (err) {
-    console.error(err);
-    setStatus("PDF konnte nicht geteilt werden. Versuche stattdessen den Download.");
-  }
-}
-
-function downloadBlob(blob) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = fileName();
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-async function downloadPdf() {
-  const blob = await createPdfBlob();
-  downloadBlob(blob);
-  setStatus("PDF wurde heruntergeladen.");
-}
-
-function clearScans() {
-  scans = [];
-  renderPages();
-  setStatus("Scans gelöscht.");
-  updateButtons();
-}
-
-function loadFiles(files) {
-  [...files].forEach(file => {
-    if (!file.type.startsWith("image/")) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      scans.push({ dataUrl: reader.result, createdAt: new Date().toISOString() });
+    div.querySelector('.del-btn').onclick = () => {
+      scans.splice(i, 1);
       renderPages();
-      setStatus(`${scans.length} Seite(n) im PDF vorbereitet.`);
-      updateButtons();
+      setStatus(scans.length ? `${scans.length} Seite(n) erfasst.` : 'Alle Seiten gelöscht.', scans.length ? 'green' : '');
+      syncUI();
     };
-    reader.readAsDataURL(file);
+    div.querySelector('.mv-up')?.addEventListener('click', () => {
+      [scans[i - 1], scans[i]] = [scans[i], scans[i - 1]];
+      renderPages();
+    });
+    div.querySelector('.mv-dn')?.addEventListener('click', () => {
+      [scans[i], scans[i + 1]] = [scans[i + 1], scans[i]];
+      renderPages();
+    });
+
+    pagesGrid.appendChild(div);
   });
 }
 
-startCameraBtn.addEventListener('click', startCamera);
-captureBtn.addEventListener('click', capturePage);
-shareBtn.addEventListener('click', sharePdf);
-downloadBtn.addEventListener('click', downloadPdf);
-clearBtn.addEventListener('click', clearScans);
-fileInput.addEventListener('change', e => loadFiles(e.target.files));
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('service-worker.js'));
+// ───────────────────────────────────────────────
+// PDF creation
+// ───────────────────────────────────────────────
+function imgDimensions(dataUrl) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve({ w: img.width, h: img.height });
+    img.src = dataUrl;
+  });
 }
 
-updateButtons();
+async function buildPdfBlob() {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+  const PW = 210, PH = 297, M = 8;
+
+  for (let i = 0; i < scans.length; i++) {
+    if (i > 0) pdf.addPage();
+    const { w, h } = await imgDimensions(scans[i].dataUrl);
+    const scale = Math.min((PW - M * 2) / w, (PH - M * 2) / h);
+    const iw = w * scale, ih = h * scale;
+    pdf.addImage(scans[i].dataUrl, 'JPEG',
+      (PW - iw) / 2, (PH - ih) / 2, iw, ih);
+  }
+  return pdf.output('blob');
+}
+
+function pdfName() {
+  return `Scan_${new Date().toISOString().slice(0, 10)}.pdf`;
+}
+
+// ───────────────────────────────────────────────
+// Share
+// ───────────────────────────────────────────────
+btnShare.addEventListener('click', async () => {
+  setStatus('PDF wird erzeugt…', 'yellow');
+  btnShare.disabled = true;
+  try {
+    const blob = await buildPdfBlob();
+    const file = new File([blob], pdfName(), { type: 'application/pdf' });
+    const to      = document.getElementById('mailTo').value.trim();
+    const subject = document.getElementById('subject').value.trim();
+    const body    = document.getElementById('body').value.trim();
+    const text    = body + (to ? `\n\nEmpfänger: ${to}` : '');
+
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ title: subject || 'Dokumente', text, files: [file] });
+      setStatus('PDF übergeben.', 'green');
+    } else {
+      triggerDownload(blob);
+      const ml = `mailto:${encodeURIComponent(to)}`
+               + `?subject=${encodeURIComponent(subject)}`
+               + `&body=${encodeURIComponent(body + '\n\nHinweis: PDF wurde heruntergeladen – bitte manuell anhängen.')}`;
+      window.location.href = ml;
+      setStatus('Teilen nicht unterstützt – PDF heruntergeladen.', 'yellow');
+    }
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.error(err);
+      setStatus('Fehler: ' + err.message, 'red');
+    } else {
+      setStatus(`${scans.length} Seite(n) erfasst.`, 'green');
+    }
+  } finally {
+    syncUI();
+  }
+});
+
+// ───────────────────────────────────────────────
+// Download
+// ───────────────────────────────────────────────
+btnDownload.addEventListener('click', async () => {
+  setStatus('PDF wird erzeugt…', 'yellow');
+  const blob = await buildPdfBlob();
+  triggerDownload(blob);
+  setStatus('PDF heruntergeladen.', 'green');
+});
+
+function triggerDownload(blob) {
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), { href: url, download: pdfName() });
+  document.body.appendChild(a);
+  a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// ───────────────────────────────────────────────
+// Clear
+// ───────────────────────────────────────────────
+btnClear.addEventListener('click', () => {
+  if (!scans.length) return;
+  if (!confirm(`${scans.length} Seite(n) wirklich löschen?`)) return;
+  scans = [];
+  renderPages();
+  setStatus('Scans gelöscht.');
+  syncUI();
+});
+
+// ───────────────────────────────────────────────
+// File import
+// ───────────────────────────────────────────────
+fileInput.addEventListener('change', async e => {
+  const files = [...e.target.files].filter(f => f.type.startsWith('image/'));
+  for (const file of files) {
+    const dataUrl = await readFileAsDataURL(file);
+    const enhanced = (useGray || useContrast) ? await enhanceImage(dataUrl) : dataUrl;
+    scans.push({ dataUrl: enhanced, ts: Date.now() });
+  }
+  if (files.length) {
+    renderPages();
+    setStatus(`${scans.length} Seite(n) geladen.`, 'green');
+    syncUI();
+  }
+  e.target.value = '';
+});
+
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload  = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+// ───────────────────────────────────────────────
+// Service Worker
+// ───────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () =>
+    navigator.serviceWorker.register('service-worker.js').catch(() => {})
+  );
+}
+
+// ───────────────────────────────────────────────
+// Init
+// ───────────────────────────────────────────────
+syncUI();
 </script>
 </body>
 </html>
