@@ -1,27 +1,55 @@
-# DocScan Mail PWA
+// DocScan Mail – Service Worker
+// Cache-first strategy for offline use
 
-Serverlose PWA zum Scannen von Dokumenten, Erzeugen einer PDF und Teilen an eine Mail-App.
+const CACHE_NAME = 'docscan-v2';
+const PRECACHE = [
+  './',
+  './index.html',
+  './manifest.webmanifest',
+  'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'
+];
 
-## Start lokal
-Die App muss über HTTPS oder localhost laufen, sonst blockiert der Browser die Kamera.
+// Install: pre-cache app shell
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(PRECACHE))
+      .then(() => self.skipWaiting())
+  );
+});
 
-Einfacher Test:
-```bash
-python -m http.server 8080
-```
-Dann im Browser öffnen:
-http://localhost:8080
+// Activate: delete old caches
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(
+        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+      )
+    ).then(() => self.clients.claim())
+  );
+});
 
-## Kostenlos erreichbar machen
-Option: GitHub Pages
+// Fetch: cache-first, fall back to network
+self.addEventListener('fetch', event => {
+  // Only handle GET requests
+  if (event.request.method !== 'GET') return;
 
-1. Neues GitHub Repository erstellen, z. B. `docscan-mail`
-2. Dateien aus diesem ZIP hochladen
-3. In GitHub: Settings > Pages > Deploy from branch > main/root
-4. Die angezeigte HTTPS-URL auf dem Smartphone öffnen
-5. Im Browser "Zum Startbildschirm hinzufügen"
-
-## Wichtig
-Ein direkter Mail-Anhang über `mailto:` funktioniert browserseitig nicht zuverlässig.
-Diese App nutzt deshalb die Web Share API. Auf Smartphones kannst du dann Gmail, Outlook oder Apple Mail auswählen.
-Wenn der Browser Dateien nicht teilen kann, lädt die App die PDF herunter und öffnet eine Mail ohne Anhang als Fallback.
+  event.respondWith(
+    caches.match(event.request).then(cached => {
+      if (cached) return cached;
+      return fetch(event.request).then(response => {
+        // Cache successful responses from our own origin
+        if (response && response.status === 200 && response.type === 'basic') {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        }
+        return response;
+      });
+    }).catch(() => {
+      // Offline fallback: return index.html for navigation requests
+      if (event.request.mode === 'navigate') {
+        return caches.match('./index.html');
+      }
+    })
+  );
+});
