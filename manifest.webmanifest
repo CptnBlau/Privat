@@ -1,11 +1,12 @@
 {
   "name": "DocScan Mail",
   "short_name": "DocScan",
-  "start_url": "./",
+  "start_url": "/Privat/index.html",
+  "scope": "/Privat/",
   "display": "standalone",
-  "background_color": "#0c0f1a",
-  "theme_color": "#0c0f1a",
-  "description": "Dokumente scannen, als PDF bündeln und per Mail-App teilen.",
+  "background_color": "#0f172a",
+  "theme_color": "#111827",
+  "description": "Dokumente scannen, verbessern, als PDF bündeln und per Mail-App teilen.",
   "icons": [
     {
       "src": "icons/icon-192.svg",
