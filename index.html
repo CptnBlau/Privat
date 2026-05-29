@@ -1,1 +1,460 @@
-<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>DocScan V4</title></head><body><h1>DocScan V4</h1><p>Neue Kamera UI mit großem Auslöser.</p></body></html>
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+
+<title>DocScan</title>
+
+<link rel="manifest" href="manifest.webmanifest">
+
+<style>
+:root{
+  --bg:#020617;
+  --card:#111827;
+  --line:#334155;
+  --text:#f8fafc;
+  --muted:#94a3b8;
+  --accent:#22c55e;
+}
+
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  font-family:system-ui,sans-serif;
+  background:linear-gradient(180deg,#020617,#111827);
+  color:var(--text);
+}
+
+main{
+  max-width:900px;
+  margin:auto;
+  padding:16px;
+}
+
+.card{
+  background:rgba(17,24,39,.96);
+  border:1px solid var(--line);
+  border-radius:24px;
+  padding:16px;
+  margin-bottom:16px;
+}
+
+h1{
+  margin-top:0;
+}
+
+button{
+  border:0;
+  border-radius:18px;
+  padding:14px 18px;
+  background:#1e293b;
+  color:white;
+  font-size:16px;
+  cursor:pointer;
+}
+
+.primary{
+  background:var(--accent);
+  color:#052e16;
+  font-weight:800;
+}
+
+canvas{
+  width:100%;
+  background:black;
+  border-radius:18px;
+  border:1px solid var(--line);
+  max-height:72vh;
+  touch-action:none;
+}
+
+#thumbs{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
+  gap:12px;
+}
+
+.thumb img{
+  width:100%;
+  border-radius:14px;
+}
+
+.status{
+  color:var(--muted);
+  margin-top:12px;
+}
+
+/* CAMERA */
+
+#cameraModal{
+  position:fixed;
+  inset:0;
+  background:black;
+  display:none;
+  z-index:9999;
+}
+
+#cameraModal.active{
+  display:block;
+}
+
+#cameraVideo{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.topbar{
+  position:absolute;
+  top:0;
+  left:0;
+  right:0;
+
+  display:flex;
+  justify-content:space-between;
+
+  padding:
+    calc(env(safe-area-inset-top) + 16px)
+    16px
+    16px;
+
+  background:linear-gradient(
+    180deg,
+    rgba(0,0,0,.7),
+    transparent
+  );
+
+  z-index:5;
+}
+
+.bottombar{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:24px;
+
+  padding:20px;
+  padding-bottom:
+    calc(env(safe-area-inset-bottom) + 28px);
+
+  background:linear-gradient(
+    180deg,
+    transparent,
+    rgba(0,0,0,.9)
+  );
+
+  z-index:5;
+}
+
+.capture{
+  width:92px;
+  height:92px;
+  border-radius:999px;
+
+  background:white;
+
+  border:8px solid rgba(255,255,255,.4);
+
+  box-shadow:
+    0 0 0 6px rgba(255,255,255,.2);
+}
+
+.small{
+  width:56px;
+  height:56px;
+  border-radius:999px;
+}
+
+.point{
+  position:absolute;
+  width:28px;
+  height:28px;
+  border-radius:999px;
+  background:#22c55e;
+  border:4px solid #052e16;
+  transform:translate(-50%,-50%);
+}
+</style>
+</head>
+
+<body>
+
+<!-- CAMERA -->
+
+<div id="cameraModal">
+
+  <video
+    id="cameraVideo"
+    autoplay
+    playsinline
+    muted
+  ></video>
+
+  <div class="topbar">
+    <button id="closeCamera">✕</button>
+    <button id="switchCamera">↺</button>
+  </div>
+
+  <div class="bottombar">
+    <button
+      class="small"
+      id="galleryBtn"
+    >🖼</button>
+
+    <button
+      class="capture"
+      id="captureBtn"
+    ></button>
+
+    <button
+      class="small"
+      id="torchBtn"
+    >💡</button>
+  </div>
+
+</div>
+
+<!-- CONTENT -->
+
+<main>
+
+  <div class="card">
+    <h1>📄 DocScan</h1>
+
+    <p>
+      Dokumente scannen,
+      zuschneiden
+      und als PDF exportieren.
+    </p>
+
+    <button
+      class="primary"
+      id="openCamera"
+    >
+      Scanner öffnen
+    </button>
+  </div>
+
+  <div class="card">
+
+    <canvas id="canvas"></canvas>
+
+    <div class="status">
+      Ziehe die 4 Punkte
+      auf die Dokumentecken.
+    </div>
+
+  </div>
+
+  <div class="card">
+    <h2>Scans</h2>
+
+    <div id="thumbs"></div>
+  </div>
+
+</main>
+
+<input
+  hidden
+  type="file"
+  accept="image/*"
+  id="fileInput"
+/>
+
+<script>
+const modal =
+  document.getElementById("cameraModal");
+
+const video =
+  document.getElementById("cameraVideo");
+
+const canvas =
+  document.getElementById("canvas");
+
+const ctx =
+  canvas.getContext("2d");
+
+const thumbs =
+  document.getElementById("thumbs");
+
+let stream = null;
+let usingFront = false;
+let scans = [];
+
+async function openCamera(){
+
+  modal.classList.add("active");
+
+  if(stream){
+    stream
+      .getTracks()
+      .forEach(t => t.stop());
+  }
+
+  stream =
+    await navigator.mediaDevices
+      .getUserMedia({
+
+        video:{
+          facingMode:
+            usingFront
+              ? "user"
+              : "environment",
+
+          width:{ideal:1920},
+          height:{ideal:1080}
+        },
+
+        audio:false
+      });
+
+  video.srcObject = stream;
+}
+
+function closeCamera(){
+
+  modal.classList.remove("active");
+
+  if(stream){
+    stream
+      .getTracks()
+      .forEach(t => t.stop());
+
+    stream = null;
+  }
+}
+
+function takePhoto(){
+
+  canvas.width =
+    video.videoWidth;
+
+  canvas.height =
+    video.videoHeight;
+
+  ctx.drawImage(
+    video,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  scans.push(
+    canvas.toDataURL(
+      "image/jpeg",
+      0.95
+    )
+  );
+
+  renderThumbs();
+
+  closeCamera();
+}
+
+function renderThumbs(){
+
+  thumbs.innerHTML = "";
+
+  scans.forEach(src => {
+
+    const div =
+      document.createElement("div");
+
+    div.className = "thumb";
+
+    div.innerHTML =
+      `<img src="${src}">`;
+
+    thumbs.appendChild(div);
+  });
+}
+
+/* EVENTS */
+
+document
+  .getElementById("openCamera")
+  .onclick = openCamera;
+
+document
+  .getElementById("closeCamera")
+  .onclick = closeCamera;
+
+document
+  .getElementById("captureBtn")
+  .onclick = takePhoto;
+
+document
+  .getElementById("switchCamera")
+  .onclick = async () => {
+
+    usingFront = !usingFront;
+
+    await openCamera();
+  };
+
+document
+  .getElementById("galleryBtn")
+  .onclick = () => {
+
+    document
+      .getElementById("fileInput")
+      .click();
+  };
+
+document
+  .getElementById("fileInput")
+  .onchange = e => {
+
+    const file =
+      e.target.files[0];
+
+    if(!file) return;
+
+    const reader =
+      new FileReader();
+
+    reader.onload = () => {
+
+      const img =
+        new Image();
+
+      img.onload = () => {
+
+        canvas.width = img.width;
+        canvas.height = img.height;
+
+        ctx.drawImage(
+          img,
+          0,
+          0
+        );
+
+        scans.push(
+          canvas.toDataURL(
+            "image/jpeg",
+            0.95
+          )
+        );
+
+        renderThumbs();
+      };
+
+      img.src = reader.result;
+    };
+
+    reader.readAsDataURL(file);
+  };
+</script>
+
+</body>
+</html>
