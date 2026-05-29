@@ -3,458 +3,1184 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-
+<meta name="theme-color" content="#020617">
 <title>DocScan</title>
-
 <link rel="manifest" href="manifest.webmanifest">
-
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <style>
-:root{
-  --bg:#020617;
-  --card:#111827;
-  --line:#334155;
-  --text:#f8fafc;
-  --muted:#94a3b8;
-  --accent:#22c55e;
+/* ══════════════════════════════════════════════
+   Base
+══════════════════════════════════════════════ */
+:root {
+  --bg:     #020617;
+  --card:   #0f172a;
+  --raised: #1e293b;
+  --line:   #1e293b;
+  --text:   #f8fafc;
+  --muted:  #64748b;
+  --dim:    #334155;
+  --accent: #22c55e;
+  --danger: #ef4444;
 }
 
-*{
-  box-sizing:border-box;
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  -webkit-text-size-adjust: 100%;
 }
 
-body{
-  margin:0;
-  font-family:system-ui,sans-serif;
-  background:linear-gradient(180deg,#020617,#111827);
-  color:var(--text);
+/* ══════════════════════════════════════════════
+   Main screen
+══════════════════════════════════════════════ */
+#mainScreen {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 20px 14px calc(env(safe-area-inset-bottom) + 32px);
 }
 
-main{
-  max-width:900px;
-  margin:auto;
-  padding:16px;
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
 }
 
-.card{
-  background:rgba(17,24,39,.96);
-  border:1px solid var(--line);
-  border-radius:24px;
-  padding:16px;
-  margin-bottom:16px;
+.app-icon {
+  width: 48px; height: 48px;
+  background: var(--accent);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+  box-shadow: 0 0 24px rgba(34,197,94,.4);
 }
 
-h1{
-  margin-top:0;
+.app-title  { font-size: 20px; font-weight: 700; line-height: 1.1; }
+.app-sub    { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+/* Card */
+.card {
+  background: var(--card);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 22px;
+  padding: 18px;
+  margin-bottom: 14px;
 }
 
-button{
-  border:0;
-  border-radius:18px;
-  padding:14px 18px;
-  background:#1e293b;
-  color:white;
-  font-size:16px;
-  cursor:pointer;
+.card-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 14px;
 }
 
-.primary{
-  background:var(--accent);
-  color:#052e16;
-  font-weight:800;
+/* Buttons */
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+button, label.file-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--dim);
+  border-radius: 14px;
+  padding: 12px 18px;
+  font-size: 15px;
+  font-family: inherit;
+  font-weight: 500;
+  background: var(--raised);
+  color: var(--text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity .15s, transform .1s;
+  user-select: none;
 }
 
-canvas{
-  width:100%;
-  background:black;
-  border-radius:18px;
-  border:1px solid var(--line);
-  max-height:72vh;
-  touch-action:none;
+button:active, label.file-btn:active { transform: scale(.96); }
+button:disabled { opacity: .35; cursor: not-allowed; transform: none !important; }
+
+button.primary {
+  background: var(--accent);
+  color: #052e16;
+  font-weight: 800;
+  font-size: 16px;
+  border-color: transparent;
+  box-shadow: 0 4px 20px rgba(34,197,94,.3);
+  padding: 14px 22px;
 }
 
-#thumbs{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
-  gap:12px;
+button.danger {
+  background: rgba(239,68,68,.12);
+  color: var(--danger);
+  border-color: rgba(239,68,68,.2);
 }
 
-.thumb img{
-  width:100%;
-  border-radius:14px;
+/* Scan grid */
+#scanGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
 }
 
-.status{
-  color:var(--muted);
-  margin-top:12px;
+.thumb {
+  background: #0a0e1a;
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 14px;
+  padding: 8px;
+  position: relative;
 }
 
-/* CAMERA */
-
-#cameraModal{
-  position:fixed;
-  inset:0;
-  background:black;
-  display:none;
-  z-index:9999;
+.thumb img {
+  width: 100%; border-radius: 9px; display: block;
 }
 
-#cameraModal.active{
-  display:block;
+.thumb-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
 }
 
-#cameraVideo{
-  width:100%;
-  height:100%;
-  object-fit:cover;
+.thumb-num { font-size: 11px; color: var(--muted); }
+
+.thumb-acts { display: flex; gap: 3px; }
+
+.thumb-acts button {
+  padding: 3px 7px;
+  font-size: 12px;
+  border-radius: 8px;
+  border-color: rgba(255,255,255,.08);
 }
 
-.topbar{
-  position:absolute;
-  top:0;
-  left:0;
-  right:0;
-
-  display:flex;
-  justify-content:space-between;
-
-  padding:
-    calc(env(safe-area-inset-top) + 16px)
-    16px
-    16px;
-
-  background:linear-gradient(
-    180deg,
-    rgba(0,0,0,.7),
-    transparent
-  );
-
-  z-index:5;
+.thumb-del {
+  position: absolute; top: 5px; right: 5px;
+  width: 22px; height: 22px;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  background: rgba(239,68,68,.85) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  font-size: 15px !important;
+  display: flex; align-items: center; justify-content: center;
 }
 
-.bottombar{
-  position:absolute;
-  left:0;
-  right:0;
-  bottom:0;
-
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  gap:24px;
-
-  padding:20px;
-  padding-bottom:
-    calc(env(safe-area-inset-bottom) + 28px);
-
-  background:linear-gradient(
-    180deg,
-    transparent,
-    rgba(0,0,0,.9)
-  );
-
-  z-index:5;
+.empty {
+  text-align: center;
+  padding: 28px 0;
+  color: var(--muted);
+  font-size: 14px;
 }
 
-.capture{
-  width:92px;
-  height:92px;
-  border-radius:999px;
+/* Mail form */
+.field { margin-top: 10px; }
+.field-lbl { font-size: 12px; color: var(--muted); display: block; margin-bottom: 5px; }
 
-  background:white;
-
-  border:8px solid rgba(255,255,255,.4);
-
-  box-shadow:
-    0 0 0 6px rgba(255,255,255,.2);
+input, textarea {
+  width: 100%;
+  background: #080c18;
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 12px;
+  padding: 11px 14px;
+  font-size: 14px;
+  font-family: inherit;
 }
 
-.small{
-  width:56px;
-  height:56px;
-  border-radius:999px;
+input:focus, textarea:focus { outline: none; border-color: rgba(34,197,94,.5); }
+textarea { min-height: 78px; resize: vertical; }
+
+.hint {
+  font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.5;
 }
 
-.point{
-  position:absolute;
-  width:28px;
-  height:28px;
-  border-radius:999px;
-  background:#22c55e;
-  border:4px solid #052e16;
-  transform:translate(-50%,-50%);
+/* Page count badge */
+.badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(34,197,94,.15);
+  color: var(--accent);
+  margin-left: 6px;
 }
+
+/* ══════════════════════════════════════════════
+   Camera fullscreen modal
+══════════════════════════════════════════════ */
+#cameraModal {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: #000;
+  display: none;
+  flex-direction: column;
+}
+
+#cameraModal.open { display: flex; }
+
+#cameraVideo {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  flex: 1;
+}
+
+/* Top bar */
+.cam-topbar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: calc(env(safe-area-inset-top) + 14px) 16px 16px;
+  background: linear-gradient(180deg, rgba(0,0,0,.75), transparent);
+  z-index: 10;
+}
+
+.cam-topbar button {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  background: rgba(0,0,0,.5);
+  border-color: rgba(255,255,255,.2);
+  backdrop-filter: blur(8px);
+}
+
+/* Bottom bar */
+.cam-bottombar {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 32px;
+  padding: 24px 24px calc(env(safe-area-inset-bottom) + 28px);
+  background: linear-gradient(0deg, rgba(0,0,0,.85), transparent);
+  z-index: 10;
+}
+
+/* Capture ring */
+.cam-capture {
+  width: 82px; height: 82px;
+  border-radius: 50%;
+  background: #fff;
+  border: 6px solid rgba(255,255,255,.35) !important;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.2);
+  padding: 0 !important;
+  transition: transform .1s !important;
+}
+
+.cam-capture:active { transform: scale(.9) !important; }
+
+/* Side buttons */
+.cam-side {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  padding: 0 !important;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  background: rgba(0,0,0,.5) !important;
+  border-color: rgba(255,255,255,.15) !important;
+  backdrop-filter: blur(8px);
+}
+
+.cam-side.torch-on {
+  background: rgba(255,220,0,.25) !important;
+  border-color: rgba(255,220,0,.5) !important;
+}
+
+/* ══════════════════════════════════════════════
+   Edit / Crop screen
+══════════════════════════════════════════════ */
+#editScreen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #000;
+  display: none;
+  flex-direction: column;
+}
+
+#editScreen.open { display: flex; }
+
+/* The edit canvas fills the available space */
+.edit-canvas-wrap {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+}
+
+#editCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+/* 4 corner handles */
+.corner-handle {
+  position: absolute;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 12px rgba(0,0,0,.6);
+  transform: translate(-50%, -50%);
+  touch-action: none;
+  cursor: grab;
+  z-index: 5;
+  transition: box-shadow .1s;
+}
+
+.corner-handle:active {
+  cursor: grabbing;
+  box-shadow: 0 0 0 8px rgba(34,197,94,.25), 0 2px 12px rgba(0,0,0,.6);
+}
+
+/* Edit bottom toolbar */
+.edit-bar {
+  background: rgba(0,0,0,.9);
+  backdrop-filter: blur(16px);
+  padding: 12px 16px calc(env(safe-area-inset-bottom) + 16px);
+  border-top: 1px solid rgba(255,255,255,.06);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Enhancement pills */
+.enh-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.enh-row::-webkit-scrollbar { display: none; }
+
+.enh-pill {
+  flex-shrink: 0;
+  padding: 8px 14px !important;
+  font-size: 13px !important;
+  border-radius: 20px !important;
+  border-color: rgba(255,255,255,.12) !important;
+  white-space: nowrap;
+}
+
+.enh-pill.active {
+  background: rgba(34,197,94,.18) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+/* Edit action row */
+.edit-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.edit-actions button { flex: 1; justify-content: center; }
+
+#btnAccept {
+  background: var(--accent) !important;
+  color: #052e16 !important;
+  font-weight: 800 !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 16px rgba(34,197,94,.3) !important;
+}
+
+/* Processing overlay */
+#processingOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.75);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  z-index: 20;
+  backdrop-filter: blur(6px);
+}
+
+#processingOverlay.show { display: flex; }
+
+.spinner {
+  width: 44px; height: 44px;
+  border: 3px solid rgba(255,255,255,.15);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.proc-lbl { font-size: 15px; color: rgba(255,255,255,.8); }
 </style>
 </head>
-
 <body>
 
-<!-- CAMERA -->
-
-<div id="cameraModal">
-
-  <video
-    id="cameraVideo"
-    autoplay
-    playsinline
-    muted
-  ></video>
-
-  <div class="topbar">
-    <button id="closeCamera">✕</button>
-    <button id="switchCamera">↺</button>
+<!-- ════════════════════════════════════════════
+     MAIN SCREEN
+════════════════════════════════════════════ -->
+<div id="mainScreen">
+  <div class="app-header">
+    <div class="app-icon">📄</div>
+    <div>
+      <div class="app-title">DocScan</div>
+      <div class="app-sub">Scannen · Zuschneiden · Als PDF teilen</div>
+    </div>
   </div>
-
-  <div class="bottombar">
-    <button
-      class="small"
-      id="galleryBtn"
-    >🖼</button>
-
-    <button
-      class="capture"
-      id="captureBtn"
-    ></button>
-
-    <button
-      class="small"
-      id="torchBtn"
-    >💡</button>
-  </div>
-
-</div>
-
-<!-- CONTENT -->
-
-<main>
 
   <div class="card">
-    <h1>📄 DocScan</h1>
-
-    <p>
-      Dokumente scannen,
-      zuschneiden
-      und als PDF exportieren.
-    </p>
-
-    <button
-      class="primary"
-      id="openCamera"
-    >
-      Scanner öffnen
+    <button class="primary" id="btnOpenCamera" style="width:100%;justify-content:center">
+      📷 Scanner öffnen
     </button>
+    <p class="hint" style="margin-top:10px">
+      Kamera öffnet als Vollbild. Foto aufnehmen → Ecken auf das Dokument ziehen → Übernehmen.
+    </p>
   </div>
 
-  <div class="card">
+  <!-- Scan list -->
+  <div class="card" id="scansCard" style="display:none">
+    <div class="card-label">
+      Gescannte Seiten
+      <span class="badge" id="scanBadge">0</span>
+    </div>
+    <div id="scanGrid"></div>
+  </div>
 
-    <canvas id="canvas"></canvas>
+  <!-- Mail / Share -->
+  <div class="card" id="shareCard" style="display:none">
+    <div class="card-label">PDF exportieren</div>
 
-    <div class="status">
-      Ziehe die 4 Punkte
-      auf die Dokumentecken.
+    <div class="field">
+      <label class="field-lbl">Empfänger (optional)</label>
+      <input id="mailTo" type="email" placeholder="name@firma.de">
+    </div>
+    <div class="field">
+      <label class="field-lbl">Betreff</label>
+      <input id="mailSubject" type="text" value="Dokumente als PDF">
+    </div>
+    <div class="field">
+      <label class="field-lbl">Nachricht</label>
+      <textarea id="mailBody">Hallo,
+
+anbei die eingescannten Dokumente.
+
+Viele Grüße</textarea>
     </div>
 
+    <div class="row" style="margin-top:14px">
+      <button class="primary" id="btnShare" style="flex:1;justify-content:center">📤 PDF senden / Teilen</button>
+      <button id="btnDownload">⬇️</button>
+      <button class="danger" id="btnClearAll">🗑</button>
+    </div>
+    <p class="hint">Auf dem iPhone öffnet „Senden" die Teilen-Auswahl — Mail, WhatsApp, AirDrop usw.</p>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     CAMERA FULLSCREEN MODAL
+════════════════════════════════════════════ -->
+<div id="cameraModal">
+  <video id="cameraVideo" playsinline autoplay muted></video>
+
+  <!-- Top bar -->
+  <div class="cam-topbar">
+    <button id="btnCloseCamera" title="Schließen">✕</button>
+    <button id="btnSwitchCam"   title="Kamera wechseln">↺</button>
   </div>
 
-  <div class="card">
-    <h2>Scans</h2>
+  <!-- Bottom bar -->
+  <div class="cam-bottombar">
+    <label class="cam-side" title="Galerie">
+      🖼
+      <input type="file" accept="image/*" id="galleryInput" hidden>
+    </label>
+    <button class="cam-capture" id="btnCapture" title="Foto aufnehmen"></button>
+    <button class="cam-side" id="btnTorch" title="Taschenlampe">💡</button>
+  </div>
+</div>
 
-    <div id="thumbs"></div>
+
+<!-- ════════════════════════════════════════════
+     EDIT / CROP SCREEN
+════════════════════════════════════════════ -->
+<div id="editScreen">
+  <div class="edit-canvas-wrap" id="editWrap">
+    <canvas id="editCanvas"></canvas>
+    <!-- 4 corner handles — TL TR BR BL -->
+    <div class="corner-handle" id="ch0"></div>
+    <div class="corner-handle" id="ch1"></div>
+    <div class="corner-handle" id="ch2"></div>
+    <div class="corner-handle" id="ch3"></div>
+    <!-- Processing overlay -->
+    <div id="processingOverlay">
+      <div class="spinner"></div>
+      <div class="proc-lbl">Wird berechnet…</div>
+    </div>
   </div>
 
-</main>
+  <div class="edit-bar">
+    <!-- Enhancement -->
+    <div class="enh-row" id="enhRow">
+      <button class="enh-pill active" data-mode="doc">📄 Dokument</button>
+      <button class="enh-pill"        data-mode="bw" >◑ S/W</button>
+      <button class="enh-pill"        data-mode="color">🎨 Farbe</button>
+      <button class="enh-pill"        data-mode="orig">🔵 Original</button>
+    </div>
+    <!-- Actions -->
+    <div class="edit-actions">
+      <button id="btnRetake">↩ Neu aufnehmen</button>
+      <button id="btnAccept">✓ Übernehmen</button>
+    </div>
+  </div>
+</div>
 
-<input
-  hidden
-  type="file"
-  accept="image/*"
-  id="fileInput"
-/>
+
+<!-- Offscreen canvas for sampling -->
+<canvas id="workCanvas" style="display:none"></canvas>
+
 
 <script>
-const modal =
-  document.getElementById("cameraModal");
+'use strict';
 
-const video =
-  document.getElementById("cameraVideo");
+// ══════════════════════════════════════════════
+//  DOM refs
+// ══════════════════════════════════════════════
+const mainScreen      = document.getElementById('mainScreen');
+const scansCard       = document.getElementById('scansCard');
+const shareCard       = document.getElementById('shareCard');
+const scanGrid        = document.getElementById('scanGrid');
+const scanBadge       = document.getElementById('scanBadge');
 
-const canvas =
-  document.getElementById("canvas");
+const cameraModal     = document.getElementById('cameraModal');
+const cameraVideo     = document.getElementById('cameraVideo');
+const btnOpenCamera   = document.getElementById('btnOpenCamera');
+const btnCloseCamera  = document.getElementById('btnCloseCamera');
+const btnSwitchCam    = document.getElementById('btnSwitchCam');
+const btnCapture      = document.getElementById('btnCapture');
+const btnTorch        = document.getElementById('btnTorch');
+const galleryInput    = document.getElementById('galleryInput');
 
-const ctx =
-  canvas.getContext("2d");
+const editScreen      = document.getElementById('editScreen');
+const editWrap        = document.getElementById('editWrap');
+const editCanvas      = document.getElementById('editCanvas');
+const procOverlay     = document.getElementById('processingOverlay');
+const enhRow          = document.getElementById('enhRow');
+const btnAccept       = document.getElementById('btnAccept');
+const btnRetake       = document.getElementById('btnRetake');
 
-const thumbs =
-  document.getElementById("thumbs");
+const btnShare        = document.getElementById('btnShare');
+const btnDownload     = document.getElementById('btnDownload');
+const btnClearAll     = document.getElementById('btnClearAll');
 
-let stream = null;
-let usingFront = false;
-let scans = [];
+const workCanvas      = document.getElementById('workCanvas');
 
-async function openCamera(){
+const handles = [0,1,2,3].map(i => document.getElementById(`ch${i}`));
 
-  modal.classList.add("active");
+// ══════════════════════════════════════════════
+//  App state
+// ══════════════════════════════════════════════
+let mediaStream    = null;
+let usingFront     = false;
+let torchOn        = false;
+let torchTrack     = null;
 
-  if(stream){
-    stream
-      .getTracks()
-      .forEach(t => t.stop());
-  }
+let capturedCanvas = null;   // raw photo as canvas
+let imgBounds      = null;   // {x,y,w,h} display coords in editCanvas
+let corners        = [];     // [{x,y}] CSS-px positions, TL TR BR BL
+let activeCorner   = -1;
+let enhMode        = 'doc';
 
-  stream =
-    await navigator.mediaDevices
-      .getUserMedia({
+let scans          = [];     // [{dataUrl}]
 
-        video:{
-          facingMode:
-            usingFront
-              ? "user"
-              : "environment",
-
-          width:{ideal:1920},
-          height:{ideal:1080}
-        },
-
-        audio:false
-      });
-
-  video.srcObject = stream;
+// ══════════════════════════════════════════════
+//  Camera
+// ══════════════════════════════════════════════
+async function openCamera() {
+  cameraModal.classList.add('open');
+  await startStream();
 }
 
-function closeCamera(){
+async function startStream() {
+  try {
+    if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+    torchOn = false; btnTorch.classList.remove('torch-on');
 
-  modal.classList.remove("active");
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: usingFront ? 'user' : { ideal: 'environment' },
+        width:  { ideal: 1920 },
+        height: { ideal: 1080 }
+      },
+      audio: false
+    });
+    cameraVideo.srcObject = mediaStream;
+    await cameraVideo.play();
 
-  if(stream){
-    stream
-      .getTracks()
-      .forEach(t => t.stop());
+    // Store torch-capable track
+    torchTrack = mediaStream.getVideoTracks().find(t => {
+      const caps = t.getCapabilities?.() || {};
+      return caps.torch;
+    }) || null;
+    btnTorch.style.opacity = torchTrack ? '1' : '0.4';
 
-    stream = null;
+  } catch (err) {
+    alert('Kamera-Fehler: ' + (err.message || 'Zugriff verweigert.'));
+    closeCamera();
   }
 }
 
-function takePhoto(){
+function closeCamera() {
+  cameraModal.classList.remove('open');
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(t => t.stop());
+    mediaStream = null;
+  }
+  torchOn = false;
+}
 
-  canvas.width =
-    video.videoWidth;
+async function toggleTorch() {
+  if (!torchTrack) return;
+  torchOn = !torchOn;
+  try {
+    await torchTrack.applyConstraints({ advanced: [{ torch: torchOn }] });
+    btnTorch.classList.toggle('torch-on', torchOn);
+  } catch { torchOn = !torchOn; }
+}
 
-  canvas.height =
-    video.videoHeight;
+function switchCamera() {
+  usingFront = !usingFront;
+  startStream();
+}
 
-  ctx.drawImage(
-    video,
-    0,
-    0,
-    canvas.width,
-    canvas.height
-  );
-
-  scans.push(
-    canvas.toDataURL(
-      "image/jpeg",
-      0.95
-    )
-  );
-
-  renderThumbs();
-
+// ── Capture from video ─────────────────────────
+function captureFromVideo() {
+  const W = cameraVideo.videoWidth  || 1280;
+  const H = cameraVideo.videoHeight || 720;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  c.getContext('2d').drawImage(cameraVideo, 0, 0, W, H);
   closeCamera();
+  openEditScreen(c);
 }
 
-function renderThumbs(){
+// ── Load from gallery ──────────────────────────
+galleryInput.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const url = await readAsDataURL(file);
+  const img = await loadImage(url);
+  const c = document.createElement('canvas');
+  c.width = img.width; c.height = img.height;
+  c.getContext('2d').drawImage(img, 0, 0);
+  closeCamera();
+  openEditScreen(c);
+});
 
-  thumbs.innerHTML = "";
+// ══════════════════════════════════════════════
+//  Edit / Crop screen
+// ══════════════════════════════════════════════
+function openEditScreen(canvas) {
+  capturedCanvas = canvas;
+  editScreen.classList.add('open');
 
-  scans.forEach(src => {
-
-    const div =
-      document.createElement("div");
-
-    div.className = "thumb";
-
-    div.innerHTML =
-      `<img src="${src}">`;
-
-    thumbs.appendChild(div);
+  // Size edit canvas to wrap
+  requestAnimationFrame(() => {
+    resizeEditCanvas();
+    initCorners();
+    renderEdit();
   });
 }
 
-/* EVENTS */
+function resizeEditCanvas() {
+  editCanvas.width  = editWrap.clientWidth;
+  editCanvas.height = editWrap.clientHeight;
+}
 
-document
-  .getElementById("openCamera")
-  .onclick = openCamera;
+function initCorners() {
+  const cw = editCanvas.width;
+  const ch = editCanvas.height;
+  const ir = capturedCanvas.width / capturedCanvas.height;
+  const cr = cw / ch;
 
-document
-  .getElementById("closeCamera")
-  .onclick = closeCamera;
+  let iw, ih, ox, oy;
+  if (ir > cr) {
+    iw = cw; ih = cw / ir; ox = 0; oy = (ch - ih) / 2;
+  } else {
+    ih = ch; iw = ch * ir; oy = 0; ox = (cw - iw) / 2;
+  }
 
-document
-  .getElementById("captureBtn")
-  .onclick = takePhoto;
+  imgBounds = { x: ox, y: oy, w: iw, h: ih };
 
-document
-  .getElementById("switchCamera")
-  .onclick = async () => {
+  const px = iw * 0.07, py = ih * 0.07;
+  corners = [
+    { x: ox + px,      y: oy + py      },
+    { x: ox + iw - px, y: oy + py      },
+    { x: ox + iw - px, y: oy + ih - py },
+    { x: ox + px,      y: oy + ih - py }
+  ];
+  placeHandles();
+}
 
-    usingFront = !usingFront;
+// Draw image + overlay + quad lines on editCanvas
+function renderEdit() {
+  const ctx = editCanvas.getContext('2d');
+  const cw = editCanvas.width;
+  const ch = editCanvas.height;
+  const b = imgBounds;
 
-    await openCamera();
+  ctx.clearRect(0, 0, cw, ch);
+
+  // Image
+  ctx.drawImage(capturedCanvas, b.x, b.y, b.w, b.h);
+
+  // Dark vignette outside quad (evenodd trick)
+  ctx.fillStyle = 'rgba(0,0,0,.55)';
+  ctx.beginPath();
+  ctx.rect(0, 0, cw, ch);
+  ctx.moveTo(corners[0].x, corners[0].y);
+  ctx.lineTo(corners[1].x, corners[1].y);
+  ctx.lineTo(corners[2].x, corners[2].y);
+  ctx.lineTo(corners[3].x, corners[3].y);
+  ctx.closePath();
+  ctx.fill('evenodd');
+
+  // Quad border
+  ctx.strokeStyle = 'rgba(34,197,94,.9)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(corners[0].x, corners[0].y);
+  ctx.lineTo(corners[1].x, corners[1].y);
+  ctx.lineTo(corners[2].x, corners[2].y);
+  ctx.lineTo(corners[3].x, corners[3].y);
+  ctx.closePath();
+  ctx.stroke();
+
+  // Edge midpoint crosshair lines (subtle guides)
+  ctx.strokeStyle = 'rgba(34,197,94,.25)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 6]);
+  for (let i = 0; i < 4; i++) {
+    const a = corners[i], b2 = corners[(i+2) % 4];
+    const mx = (a.x + b2.x) / 2, my = (a.y + b2.y) / 2;
+    const adj = corners[(i+1) % 4], adj2 = corners[(i+3) % 4];
+    const mx2 = (adj.x + adj2.x) / 2, my2 = (adj.y + adj2.y) / 2;
+    if (i < 2) {
+      ctx.beginPath(); ctx.moveTo(mx, 0); ctx.lineTo(mx, editCanvas.height); ctx.stroke();
+    }
+  }
+  ctx.setLineDash([]);
+}
+
+function placeHandles() {
+  handles.forEach((h, i) => {
+    h.style.left = corners[i].x + 'px';
+    h.style.top  = corners[i].y + 'px';
+  });
+}
+
+// ── Touch / mouse drag on handles ─────────────
+handles.forEach((handle, idx) => {
+  handle.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    activeCorner = idx;
+    handle.setPointerCapture(e.pointerId);
+  }, { passive: false });
+
+  handle.addEventListener('pointermove', e => {
+    if (activeCorner !== idx) return;
+    e.preventDefault();
+    const rect = editWrap.getBoundingClientRect();
+    const x = Math.max(0, Math.min(editCanvas.width,  e.clientX - rect.left));
+    const y = Math.max(0, Math.min(editCanvas.height, e.clientY - rect.top));
+    corners[idx] = { x, y };
+    handle.style.left = x + 'px';
+    handle.style.top  = y + 'px';
+    renderEdit();
+  }, { passive: false });
+
+  handle.addEventListener('pointerup', () => { activeCorner = -1; });
+});
+
+// ── Enhancement pills ──────────────────────────
+enhRow.querySelectorAll('.enh-pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    enhMode = pill.dataset.mode;
+    enhRow.querySelectorAll('.enh-pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+  });
+});
+
+// ── Retake ────────────────────────────────────
+btnRetake.addEventListener('click', () => {
+  editScreen.classList.remove('open');
+  capturedCanvas = null;
+  openCamera();
+});
+
+// ── Accept: warp + enhance + add to scans ─────
+btnAccept.addEventListener('click', async () => {
+  procOverlay.classList.add('show');
+  // Yield to browser to render overlay
+  await sleep(30);
+  try {
+    const imgCorners = corners.map(c => cssToImg(c));
+    const warped = await warpQuad(capturedCanvas, imgCorners);
+    applyEnhancement(warped, enhMode);
+    scans.push({ dataUrl: warped.toDataURL('image/jpeg', 0.92) });
+    renderScans();
+    editScreen.classList.remove('open');
+    capturedCanvas = null;
+  } catch (err) {
+    console.error(err);
+    alert('Fehler bei der Verarbeitung: ' + err.message);
+  } finally {
+    procOverlay.classList.remove('show');
+  }
+});
+
+// Convert CSS-pixel corner to image-pixel coordinate
+function cssToImg(pt) {
+  const b = imgBounds;
+  return {
+    x: (pt.x - b.x) / b.w * capturedCanvas.width,
+    y: (pt.y - b.y) / b.h * capturedCanvas.height
   };
+}
 
-document
-  .getElementById("galleryBtn")
-  .onclick = () => {
+// ══════════════════════════════════════════════
+//  Homography + Perspective Warp
+// ══════════════════════════════════════════════
 
-    document
-      .getElementById("fileInput")
-      .click();
+/** Gaussian elimination: solve Ax = b, returns x */
+function gaussElim(A, b) {
+  const n = b.length;
+  const M = A.map((row, i) => [...row, b[i]]);
+
+  for (let p = 0; p < n; p++) {
+    // Find pivot
+    let mx = p;
+    for (let r = p + 1; r < n; r++) {
+      if (Math.abs(M[r][p]) > Math.abs(M[mx][p])) mx = r;
+    }
+    [M[p], M[mx]] = [M[mx], M[p]];
+
+    if (Math.abs(M[p][p]) < 1e-12) continue;
+
+    for (let r = p + 1; r < n; r++) {
+      const f = M[r][p] / M[p][p];
+      for (let c = p; c <= n; c++) M[r][c] -= f * M[p][c];
+    }
+  }
+
+  const x = new Float64Array(n);
+  for (let i = n - 1; i >= 0; i--) {
+    if (Math.abs(M[i][i]) < 1e-12) continue;
+    x[i] = M[i][n] / M[i][i];
+    for (let k = i - 1; k >= 0; k--) M[k][n] -= M[k][i] * x[i];
+  }
+  return x;
+}
+
+/** Compute 3x3 homography H from 4 src->dst point correspondences.
+ *  Returns flat 9-element array [h00..h22] (h22 = 1). */
+function computeH(src, dst) {
+  const A = [], b = [];
+  for (let i = 0; i < 4; i++) {
+    const sx = src[i].x, sy = src[i].y;
+    const dx = dst[i].x, dy = dst[i].y;
+    A.push([sx, sy, 1, 0,  0,  0, -dx * sx, -dx * sy]);
+    b.push(dx);
+    A.push([0,  0,  0, sx, sy, 1, -dy * sx, -dy * sy]);
+    b.push(dy);
+  }
+  const h = gaussElim(A, b);
+  return [h[0],h[1],h[2], h[3],h[4],h[5], h[6],h[7], 1.0];
+}
+
+function applyH(H, x, y) {
+  const w = H[6] * x + H[7] * y + 1.0;
+  return {
+    x: (H[0] * x + H[1] * y + H[2]) / w,
+    y: (H[3] * x + H[4] * y + H[5]) / w
   };
+}
 
-document
-  .getElementById("fileInput")
-  .onchange = e => {
+/** Perspective warp: map quad in srcCanvas to a rectangle.
+ *  imgCorners = [TL, TR, BR, BL] in src pixel coords. */
+function warpQuad(srcCanvas, imgCorners) {
+  return new Promise(resolve => {
+    const [TL, TR, BR, BL] = imgCorners;
+    const topW   = Math.hypot(TR.x - TL.x, TR.y - TL.y);
+    const botW   = Math.hypot(BR.x - BL.x, BR.y - BL.y);
+    const leftH  = Math.hypot(BL.x - TL.x, BL.y - TL.y);
+    const rightH = Math.hypot(BR.x - TR.x, BR.y - TR.y);
 
-    const file =
-      e.target.files[0];
+    let W = Math.round((topW + botW) / 2);
+    let H = Math.round((leftH + rightH) / 2);
 
-    if(!file) return;
+    // Cap max dimension to 1800 px
+    const M = Math.max(W, H);
+    if (M > 1800) { W = Math.round(W * 1800 / M); H = Math.round(H * 1800 / M); }
+    if (W < 2 || H < 2) { W = 800; H = 600; }
 
-    const reader =
-      new FileReader();
+    // Inverse homography: dst → src
+    const invH = computeH(
+      [{ x:0,y:0 }, { x:W,y:0 }, { x:W,y:H }, { x:0,y:H }],
+      imgCorners
+    );
 
-    reader.onload = () => {
+    const sw = srcCanvas.width, sh = srcCanvas.height;
+    const srcCtx  = srcCanvas.getContext('2d');
+    const srcData = srcCtx.getImageData(0, 0, sw, sh).data;
 
-      const img =
-        new Image();
+    const dst    = document.createElement('canvas');
+    dst.width = W; dst.height = H;
+    const dstCtx  = dst.getContext('2d');
+    const dstImg  = dstCtx.createImageData(W, H);
+    const dstData = dstImg.data;
 
-      img.onload = () => {
+    // Pixel-level inverse warp with bilinear interpolation
+    for (let dy = 0; dy < H; dy++) {
+      for (let dx = 0; dx < W; dx++) {
+        const { x: sx, y: sy } = applyH(invH, dx, dy);
+        const x0 = sx | 0, y0 = sy | 0;
+        if (x0 < 0 || y0 < 0 || x0 + 1 >= sw || y0 + 1 >= sh) continue;
 
-        canvas.width = img.width;
-        canvas.height = img.height;
+        const fx = sx - x0, fy = sy - y0;
+        const w00 = (1 - fx) * (1 - fy);
+        const w10 = fx * (1 - fy);
+        const w01 = (1 - fx) * fy;
+        const w11 = fx * fy;
 
-        ctx.drawImage(
-          img,
-          0,
-          0
-        );
+        const i00 = (y0 * sw + x0) * 4;
+        const i10 = i00 + 4;
+        const i01 = ((y0 + 1) * sw + x0) * 4;
+        const i11 = i01 + 4;
+        const di  = (dy * W + dx) * 4;
 
-        scans.push(
-          canvas.toDataURL(
-            "image/jpeg",
-            0.95
-          )
-        );
+        dstData[di]     = w00*srcData[i00]   + w10*srcData[i10]   + w01*srcData[i01]   + w11*srcData[i11];
+        dstData[di + 1] = w00*srcData[i00+1] + w10*srcData[i10+1] + w01*srcData[i01+1] + w11*srcData[i11+1];
+        dstData[di + 2] = w00*srcData[i00+2] + w10*srcData[i10+2] + w01*srcData[i01+2] + w11*srcData[i11+2];
+        dstData[di + 3] = 255;
+      }
+    }
 
-        renderThumbs();
-      };
+    dstCtx.putImageData(dstImg, 0, 0);
+    resolve(dst);
+  });
+}
 
-      img.src = reader.result;
+// ══════════════════════════════════════════════
+//  Image enhancement
+// ══════════════════════════════════════════════
+function applyEnhancement(canvas, mode) {
+  if (mode === 'orig') return;
+  const ctx = canvas.getContext('2d');
+  const id  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d   = id.data;
+
+  for (let i = 0; i < d.length; i += 4) {
+    let r = d[i], g = d[i+1], b = d[i+2];
+
+    if (mode === 'doc' || mode === 'bw') {
+      const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+      r = g = b = gray;
+    }
+
+    if (mode === 'doc') {
+      // High-contrast document mode
+      const f = 1.65, boost = 14;
+      r = clamp(f * (r - 128) + 128 + boost);
+      g = clamp(f * (g - 128) + 128 + boost);
+      b = clamp(f * (b - 128) + 128 + boost);
+    } else if (mode === 'color') {
+      // Moderate contrast for color docs
+      const f = 1.3, boost = 8;
+      r = clamp(f * (r - 128) + 128 + boost);
+      g = clamp(f * (g - 128) + 128 + boost);
+      b = clamp(f * (b - 128) + 128 + boost);
+    }
+
+    d[i] = r; d[i+1] = g; d[i+2] = b;
+  }
+
+  ctx.putImageData(id, 0, 0);
+}
+
+function clamp(v) { return v < 0 ? 0 : v > 255 ? 255 : v | 0; }
+
+// ══════════════════════════════════════════════
+//  Scan management
+// ══════════════════════════════════════════════
+function renderScans() {
+  scanGrid.innerHTML = '';
+  scansCard.style.display = scans.length ? 'block' : 'none';
+  shareCard.style.display = scans.length ? 'block' : 'none';
+  scanBadge.textContent   = scans.length;
+
+  scans.forEach((scan, i) => {
+    const div = document.createElement('div');
+    div.className = 'thumb';
+    div.innerHTML = `
+      <button class="thumb-del">×</button>
+      <img src="${scan.dataUrl}" alt="Seite ${i+1}">
+      <div class="thumb-footer">
+        <span class="thumb-num">Seite ${i+1}</span>
+        <div class="thumb-acts">
+          ${i > 0 ? '<button class="mv-up">↑</button>' : ''}
+          ${i < scans.length-1 ? '<button class="mv-dn">↓</button>' : ''}
+        </div>
+      </div>
+    `;
+    div.querySelector('.thumb-del').onclick = () => {
+      scans.splice(i, 1);
+      renderScans();
     };
+    div.querySelector('.mv-up')?.addEventListener('click', () => {
+      [scans[i-1], scans[i]] = [scans[i], scans[i-1]];
+      renderScans();
+    });
+    div.querySelector('.mv-dn')?.addEventListener('click', () => {
+      [scans[i], scans[i+1]] = [scans[i+1], scans[i]];
+      renderScans();
+    });
+    scanGrid.appendChild(div);
+  });
+}
 
-    reader.readAsDataURL(file);
-  };
+btnClearAll.addEventListener('click', () => {
+  if (!scans.length) return;
+  if (!confirm(`${scans.length} Seite(n) wirklich löschen?`)) return;
+  scans = [];
+  renderScans();
+});
+
+// ══════════════════════════════════════════════
+//  PDF + Share
+// ══════════════════════════════════════════════
+async function buildPdf() {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+  const PW = 210, PH = 297, M = 8;
+
+  for (let i = 0; i < scans.length; i++) {
+    if (i > 0) pdf.addPage();
+    const { w, h } = await imgDims(scans[i].dataUrl);
+    const scale = Math.min((PW - M*2) / w, (PH - M*2) / h);
+    const iw = w * scale, ih = h * scale;
+    pdf.addImage(scans[i].dataUrl, 'JPEG', (PW-iw)/2, (PH-ih)/2, iw, ih);
+  }
+  return pdf.output('blob');
+}
+
+function pdfName() {
+  return `Scan_${new Date().toISOString().slice(0,10)}.pdf`;
+}
+
+btnShare.addEventListener('click', async () => {
+  btnShare.disabled = true;
+  try {
+    const blob = await buildPdf();
+    const file = new File([blob], pdfName(), { type: 'application/pdf' });
+    const to   = document.getElementById('mailTo').value.trim();
+    const subj = document.getElementById('mailSubject').value.trim();
+    const body = document.getElementById('mailBody').value.trim();
+
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ title: subj || 'Dokument', text: body, files: [file] });
+    } else {
+      triggerDownload(blob);
+      const ml = `mailto:${encodeURIComponent(to)}`
+               + `?subject=${encodeURIComponent(subj)}`
+               + `&body=${encodeURIComponent(body + '\n\n(PDF wurde heruntergeladen)')}`;
+      window.location.href = ml;
+    }
+  } catch(err) {
+    if (err.name !== 'AbortError') alert('Fehler: ' + err.message);
+  } finally {
+    btnShare.disabled = false;
+  }
+});
+
+btnDownload.addEventListener('click', async () => {
+  const blob = await buildPdf();
+  triggerDownload(blob);
+});
+
+function triggerDownload(blob) {
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), { href: url, download: pdfName() });
+  document.body.appendChild(a);
+  a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// ══════════════════════════════════════════════
+//  Utilities
+// ══════════════════════════════════════════════
+function readAsDataURL(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function loadImage(src) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => res(img);
+    img.onerror = rej;
+    img.src = src;
+  });
+}
+
+function imgDims(dataUrl) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => res({ w: img.width, h: img.height });
+    img.src = dataUrl;
+  });
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ══════════════════════════════════════════════
+//  Wire up events
+// ══════════════════════════════════════════════
+btnOpenCamera.addEventListener('click', openCamera);
+btnCloseCamera.addEventListener('click', closeCamera);
+btnSwitchCam.addEventListener('click', switchCamera);
+btnCapture.addEventListener('click', captureFromVideo);
+btnTorch.addEventListener('click', toggleTorch);
+
+// Handle window resize while in edit screen
+window.addEventListener('resize', () => {
+  if (!editScreen.classList.contains('open') || !capturedCanvas) return;
+  resizeEditCanvas();
+  initCorners();
+  renderEdit();
+});
+
+// Service worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () =>
+    navigator.serviceWorker.register('service-worker.js').catch(() => {})
+  );
+}
 </script>
-
 </body>
 </html>
